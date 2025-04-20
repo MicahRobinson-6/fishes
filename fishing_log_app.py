@@ -83,50 +83,50 @@ if isinstance(clicked, dict) and isinstance(clicked.get("last_clicked"), dict):
     latlng = clicked["last_clicked"]
     lat = latlng.get("lat")
     lon = latlng.get("lng")
-    if lat is not None and lon is not None:
-    lat, lon = last_clicked["lat"], last_clicked["lng"]
-    estimated_depth = estimate_depth_from_combined_sources(lat, lon)
-
-    st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
-    st.info(f"Estimated Water Depth at this point: **{estimated_depth} ft**\n\nBased on USGS gage reading with location-based adjustment.")
-
-    with st.form("fish_log_form"):
-        loc_name = st.selectbox("Location Name:", list(LOCATIONS.keys()))
-        water_type = st.selectbox("Water Type:", ["Channel", "Near Channel", "Slack"])
-        position = st.selectbox("Position in Water Body:", ["Shore", "Transition", "Middle"])
-        depth = st.number_input("Water Depth (ft):", 0.0, 50.0, value=estimated_depth)
-        fish_depth = st.number_input("Fish Depth (ft):", 0.0, 50.0, value=max(0.0, estimated_depth - 1.0))
-        bait = st.text_input("Bait Used:")
-        rigging = st.text_input("Rigging Setup (e.g., Carolina rig, slip float, etc.)")
-        fish_type = st.text_input("Fish Caught:", "Channel Catfish")
-        length = st.number_input("Length (in):", 0.0, 60.0, 20.0)
-        weight = st.number_input("Weight (lb):", 0.0, 100.0, 5.0)
-        notes = st.text_area("Notes:")
-        score = st.slider("Trip Success Score (1–10)", 1, 10, 8)
-        submitted = st.form_submit_button("Log This Fish")
-
-        if submitted:
-            now = datetime.now()
-            new_fish_entry = {
-                "Date": now.strftime("%Y-%m-%d"),
-                "Time": now.strftime("%I:%M %p"),
-                "Location Name": loc_name,
-                "Latitude": lat,
-                "Longitude": lon,
-                "Fish Type": fish_type,
-                "Length (in)": length,
-                "Weight (lb)": weight,
-                "Water Depth (ft)": depth,
-                "Fish Depth (ft)": fish_depth,
-                "Bait Used": bait,
-                "Rigging": rigging,
-                "Water Type": water_type,
-                "Position": position,
-                "Success Score (1–10)": score,
-                "Notes": notes
-            }
-            st.session_state.setdefault("fish_log", []).append(new_fish_entry)
-            st.success("✅ Fish entry logged!")
+        if lat is not None and lon is not None:
+        lat, lon = last_clicked["lat"], last_clicked["lng"]
+        estimated_depth = estimate_depth_from_combined_sources(lat, lon)
+    
+        st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
+        st.info(f"Estimated Water Depth at this point: **{estimated_depth} ft**\n\nBased on USGS gage reading with location-based adjustment.")
+    
+        with st.form("fish_log_form"):
+            loc_name = st.selectbox("Location Name:", list(LOCATIONS.keys()))
+            water_type = st.selectbox("Water Type:", ["Channel", "Near Channel", "Slack"])
+            position = st.selectbox("Position in Water Body:", ["Shore", "Transition", "Middle"])
+            depth = st.number_input("Water Depth (ft):", 0.0, 50.0, value=estimated_depth)
+            fish_depth = st.number_input("Fish Depth (ft):", 0.0, 50.0, value=max(0.0, estimated_depth - 1.0))
+            bait = st.text_input("Bait Used:")
+            rigging = st.text_input("Rigging Setup (e.g., Carolina rig, slip float, etc.)")
+            fish_type = st.text_input("Fish Caught:", "Channel Catfish")
+            length = st.number_input("Length (in):", 0.0, 60.0, 20.0)
+            weight = st.number_input("Weight (lb):", 0.0, 100.0, 5.0)
+            notes = st.text_area("Notes:")
+            score = st.slider("Trip Success Score (1–10)", 1, 10, 8)
+            submitted = st.form_submit_button("Log This Fish")
+    
+            if submitted:
+                now = datetime.now()
+                new_fish_entry = {
+                    "Date": now.strftime("%Y-%m-%d"),
+                    "Time": now.strftime("%I:%M %p"),
+                    "Location Name": loc_name,
+                    "Latitude": lat,
+                    "Longitude": lon,
+                    "Fish Type": fish_type,
+                    "Length (in)": length,
+                    "Weight (lb)": weight,
+                    "Water Depth (ft)": depth,
+                    "Fish Depth (ft)": fish_depth,
+                    "Bait Used": bait,
+                    "Rigging": rigging,
+                    "Water Type": water_type,
+                    "Position": position,
+                    "Success Score (1–10)": score,
+                    "Notes": notes
+                }
+                st.session_state.setdefault("fish_log", []).append(new_fish_entry)
+                st.success("✅ Fish entry logged!")
 
 if "fish_log" in st.session_state:
     st.subheader("📄 Logged Catches")
