@@ -31,6 +31,8 @@ import pytz
 import openmeteo_requests
 from retry_requests import retry
 
+st.set_page_config(page_title="Fishing Forecast App", layout="wide")
+
 # --- Settings ---
 LOCATIONS = {
     "113 Bridge": {
@@ -115,7 +117,6 @@ def fetch_weather_data(latitude, longitude, timezone="America/Chicago", show_err
 # --- Streamlit Interface ---
 settings = get_user_settings()
 
-st.set_page_config(page_title="Fishing Forecast App", layout="wide")
 st.title("🎣 Fishing Success Predictor")
 
 st.markdown("This app pulls live water condition data from the Yahara River (USGS Station 05427850) and calculates trends to help you predict fishing success. Weather conditions are included too.")
