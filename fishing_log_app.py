@@ -20,7 +20,7 @@ import requests
 from datetime import datetime, timedelta
 import pytz
 import streamlit_folium as st_folium
-from folium import Map, Marker, TileLayer, LayerControl, Popup
+import folium
 from geopy.distance import geodesic
 
 # --- Settings ---
@@ -70,21 +70,21 @@ def estimate_depth_from_combined_sources(lat, lon):
 st.title("🎣 Log Fish by Map Location")
 st.markdown("Click on the map to mark exactly where you caught each fish. You can log multiple fish with details for each.")
 
-m = Map(location=[43.139, -89.387], zoom_start=15)
-TileLayer("Esri.WorldImagery", name="Satellite").add_to(m)
-TileLayer("OpenTopoMap", name="Topo").add_to(m)
-TileLayer("OpenSeaMap", name="Water Depth").add_to(m)
-LayerControl().add_to(m)
+m = folium.Map(location=[43.139, -89.387], zoom_start=15)
+folium.TileLayer("Esri.WorldImagery", name="Satellite").add_to(m)
+folium.TileLayer("Stamen Terrain", name="Terrain").add_to(m)
+folium.TileLayer("OpenSeaMap", name="Water Depth").add_to(m)
+folium.LayerControl().add_to(m)
 
+# Add existing catch markers
 if "fish_log" in st.session_state:
     for entry in st.session_state["fish_log"]:
         coords = (entry["Latitude"], entry["Longitude"])
         label = f"{entry['Fish Type']} ({entry['Weight (lb)']} lb)"
-        Marker(location=coords, popup=Popup(label)).add_to(m)
+        folium.Marker(location=coords, popup=folium.Popup(label)).add_to(m)
 
-st.markdown("**🗺️ Click on the map to add a catch location.**")
-map_data = st_folium.folium_static(m, width=700, height=500)
-clicked = st_folium.folium_static(m, width=700, height=500)
+# Capture map interaction
+clicked = st_folium.st_folium(m, width=700, height=500)
 
 if clicked is not None and isinstance(clicked, dict) and 'last_clicked' in clicked:
     lat, lon = clicked['last_clicked']['lat'], clicked['last_clicked']['lng']
