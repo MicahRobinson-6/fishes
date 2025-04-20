@@ -1,42 +1,41 @@
-
 # Fishing App Data Structure Overview
 
 # Data saved with each location:
 # - Name (e.g., '113 Bridge')
 # - GPS Coordinates (latitude, longitude)
 # - Sub-locations (e.g., 'Below Bridge', 'Pool Between Bridges')
+# - Parking Locations (list of (lat, lon) tuples)
 
-# User-defined for each fishing log entry:
-# - List: Location names and sub-locations
-# - Area type (Channel, Hold, Flat, Drop Off)
-# - Water Type (Channel, Near Channel, Slack)
-# - Position in Water Body (Shore, Transition, Middle)
-# - Water Depth (ft)
-# - Fish Depth (ft)
-# - Shore or Boat
-# - Parking Lot or Boat Launch Used
-# - Manual Success Score (1–10)
-# - Notes (optional in CSV)
+# Each fish log entry will now include:
+# - Location (linked to saved spots)
+# - Specific catch coordinates (lat, lon)
+# - Water/fish depth, bait, catch details
+# - Environmental data automatically pulled from APIs
 
-# Automatically pulled for each log entry (by date/location):
-# - USGS data (flow, gage height, water temperature)
-# - Calculated USGS trends (1-day change, 3-day rolling average)
-# - Weather data (air temperature, humidity, pressure, wind speed/direction)
+# Users will interactively click on a map to drop a marker and log catches by position
 
 import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
 import pytz
-
-st.set_page_config(page_title="Fishing Forecast App", layout="wide")
+import streamlit_folium as st_folium
+from folium import Map, Marker, TileLayer, LayerControl, Popup
+from geopy.distance import geodesic
 
 # --- Settings ---
 LOCATIONS = {
     "113 Bridge": {
         "coordinates": (43.139, -89.387),
         "sub_locations": ["Below Bridge", "Above Bridge", "Pool Between Bridges"],
-        "parking": [(43.151959, -89.404354), (43.152918, -89.403104), (43.152918, -89.403104)] 
+        "parking": [(43.1392, -89.3875), (43.1388, -89.3862)]
+    }
+}
+USGS_STATION = {
+    "05427850": {
+        "name": "Yahara River at State Highway 113 at Madison, WI",
+        "coordinates": (43.1393, -89.3870),
+        "site_id": "05427850"
     }
 }
 PARAMS = {
@@ -45,201 +44,94 @@ PARAMS = {
     "00010": "Water Temperature (°C)"
 }
 
-def get_user_settings():
-    st.sidebar.header("⚙️ Settings")
-    show_errors = st.sidebar.checkbox("Show error messages when data fails to load", value=True)
-    return {"show_errors": show_errors}
-
-# --- Location Management ---
-st.sidebar.subheader("📍 Manage Locations")
-edit_location = st.sidebar.selectbox("Edit an existing location:", ["None"] + list(LOCATIONS.keys()))
-if edit_location != "None":
-    new_name = st.sidebar.text_input("Location Name", edit_location)
-    lat = st.sidebar.number_input("Latitude", value=LOCATIONS[edit_location]["coordinates"][0])
-    lon = st.sidebar.number_input("Longitude", value=LOCATIONS[edit_location]["coordinates"][1])
-    subs = st.sidebar.text_area("Sub-locations (comma separated)", ", ".join(LOCATIONS[edit_location]["sub_locations"]))
-    parks = st.sidebar.text_area("Parking coordinates (comma separated lat,lon)", ", ".join([f"{x[0]},{x[1]}" for x in LOCATIONS[edit_location].get("parking", [])]))
-    if st.sidebar.button("Update Location"):
-        LOCATIONS.pop(edit_location)
-        LOCATIONS[new_name] = {
-            "coordinates": (lat, lon),
-            "sub_locations": [s.strip() for s in subs.split(",") if s.strip()],
-            "parking": [tuple(map(float, p.strip().split(","))) for p in parks.split("\n") if p.strip() and "," in p]
-        }
-        st.sidebar.success(f"Updated location '{new_name}'")
-        st.experimental_rerun()
-    if st.sidebar.button("Delete Location"):
-        LOCATIONS.pop(edit_location)
-        st.sidebar.success(f"Deleted location '{edit_location}'")
-        st.experimental_rerun()
-
-add_new_loc = st.sidebar.checkbox("Add New Location")
-if add_new_loc:
-    name = st.sidebar.text_input("New Location Name")
-    lat = st.sidebar.number_input("New Latitude")
-    lon = st.sidebar.number_input("New Longitude")
-    sub = st.sidebar.text_area("Sub-locations (comma separated)")
-    parks = st.sidebar.text_area("Parking coordinates (one lat,lon per line)")
-    if st.sidebar.button("Add Location"):
-        if name and sub:
-            LOCATIONS[name] = {
-                "coordinates": (lat, lon),
-                "sub_locations": [s.strip() for s in sub.split(",") if s.strip()],
-                "parking": [tuple(map(float, p.strip().split(","))) for p in parks.split("\n") if p.strip() and "," in p]
-            }
-            st.sidebar.success(f"Added location '{name}'")
-            st.experimental_rerun()
-
-# --- Functions ---
-def fetch_usgs_data(site_id, days=7, show_errors=True):
+# Fetch current gage height from USGS API
+def fetch_usgs_gage_height(site_id):
     try:
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
-        url = f"https://waterservices.usgs.gov/nwis/iv/?format=json&sites={site_id}&startDT={start_date.strftime('%Y-%m-%d')}&endDT={end_date.strftime('%Y-%m-%d')}&parameterCd=00060,00065,00010&siteStatus=all"
+        url = f"https://waterservices.usgs.gov/nwis/iv/?format=json&sites={site_id}&parameterCd=00065&siteStatus=all"
         response = requests.get(url)
-        response.raise_for_status()
         data = response.json()
-
-        timeseries = data['value']['timeSeries']
-        df_list = []
-
-        for series in timeseries:
-            variable = series['variable']['variableCode'][0]['value']
-            name = PARAMS.get(variable, variable)
-            values = series['values'][0]['value']
-            df = pd.DataFrame(values)
-            df['dateTime'] = pd.to_datetime(df['dateTime'])
-            df[name] = pd.to_numeric(df['value'], errors='coerce')
-            df = df[['dateTime', name]]
-            df_list.append(df.set_index('dateTime'))
-
-        final_df = pd.concat(df_list, axis=1).reset_index()
-        return final_df
+        value = data['value']['timeSeries'][0]['values'][0]['value'][0]['value']
+        return float(value)
     except Exception as e:
-        if show_errors:
-            st.error(f"Failed to fetch USGS data: {e}")
-        return pd.DataFrame()
+        st.warning(f"Could not fetch gage height: {e}")
+        return 8.0  # fallback depth
 
-def calculate_trends(df):
-    trend_df = df.copy()
-    trend_df = trend_df.sort_values('dateTime')
-    for col in PARAMS.values():
-        if col in trend_df.columns:
-            trend_df[f'{col} 1d Change'] = trend_df[col].diff()
-            trend_df[f'{col} 3d Rolling Avg'] = trend_df[col].rolling(window=3).mean()
-    return trend_df
+# Estimate depth using USGS and bathymetric approximation
+def estimate_depth_from_combined_sources(lat, lon):
+    nearest = min(USGS_STATION.items(), key=lambda s: geodesic(s[1]["coordinates"], (lat, lon)).feet)
+    station_id, station_data = nearest
+    gage_depth = fetch_usgs_gage_height(station_data["site_id"])
+    channel_center = LOCATIONS["113 Bridge"]["coordinates"]
+    distance_from_center = geodesic(channel_center, (lat, lon)).meters
+    bathy_adjustment = max(0, 3.0 - distance_from_center / 15.0)
+    return round(gage_depth + bathy_adjustment, 1)
 
-def fetch_weather_data(latitude, longitude, timezone="America/Chicago", show_errors=True):
-    try:
-        url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "hourly": "temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m",
-            "timezone": timezone
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        hourly = pd.DataFrame(data["hourly"])
-        hourly["time"] = pd.to_datetime(hourly["time"])
-        return hourly
-    except Exception as e:
-        if show_errors:
-            st.error(f"Failed to fetch weather data: {e}")
-        return pd.DataFrame()
-# --- Streamlit Interface ---
-settings = get_user_settings()
+# --- Interactive Catch Map Logging ---
+st.title("🎣 Log Fish by Map Location")
+st.markdown("Click on the map to mark exactly where you caught each fish. You can log multiple fish with details for each.")
 
-st.title("🎣 Fishing Success Predictor")
+m = Map(location=[43.139, -89.387], zoom_start=15)
+TileLayer("Esri.WorldImagery", name="Satellite").add_to(m)
+TileLayer("OpenTopoMap", name="Topo").add_to(m)
+TileLayer("OpenSeaMap", name="Water Depth").add_to(m)
+LayerControl().add_to(m)
 
-st.markdown("This app pulls live water condition data from the Yahara River (USGS Station 05427850) and calculates trends to help you predict fishing success. Weather conditions are included too.")
+if "fish_log" in st.session_state:
+    for entry in st.session_state["fish_log"]:
+        coords = (entry["Latitude"], entry["Longitude"])
+        label = f"{entry['Fish Type']} ({entry['Weight (lb)']} lb)"
+        Marker(location=coords, popup=Popup(label)).add_to(m)
 
-# Select location and sub-location
-st.subheader("📍 Select Fishing Location")
-location_name = st.selectbox("Choose a fishing location:", list(LOCATIONS.keys()))
-sub_location = st.selectbox("Choose a sub-location (optional):", LOCATIONS[location_name]["sub_locations"])
-coords = LOCATIONS[location_name]["coordinates"]
+st.markdown("**🗺️ Click on the map to add a catch location.**")
+map_data = st_folium.folium_static(m, width=700, height=500)
+clicked = st_folium.folium_static(m, width=700, height=500)
 
-# Additional location details
-area_type = st.selectbox("Area Type:", ["Channel", "Hold", "Flat", "Drop Off"])
-water_type = st.selectbox("Water Type:", ["Channel", "Near Channel", "Slack"])
-position = st.selectbox("Position in Water Body:", ["Shore", "Transition", "Middle"])
-shore_or_boat = st.selectbox("Fishing Method:", ["Shore", "Boat"])
-access_point = st.text_input("Parking Lot or Boat Launch Used:")
-water_depth = st.number_input("Water Depth (ft):", min_value=0.0, step=0.1)
-fish_depth = st.number_input("Fish Depth (ft):", min_value=0.0, step=0.1)
+if clicked and 'last_clicked' in clicked:
+    lat, lon = clicked['last_clicked']['lat'], clicked['last_clicked']['lng']
+    estimated_depth = estimate_depth_from_combined_sources(lat, lon)
+    st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
+    st.info(f"Estimated Water Depth at this point: **{estimated_depth} ft**\n\nBased on USGS gage reading and relative distance from channel center.")
 
-# Fetch and process USGS data
-with st.spinner("Fetching USGS data..."):
-    raw_df = fetch_usgs_data("05427850", days=7, show_errors=settings["show_errors"])
-    trend_df = calculate_trends(raw_df)
+    with st.form("fish_log_form"):
+        loc_name = st.selectbox("Location Name:", list(LOCATIONS.keys()))
+        area = st.selectbox("Area Type:", ["Channel", "Hold", "Flat", "Drop Off"])
+        water_type = st.selectbox("Water Type:", ["Channel", "Near Channel", "Slack"])
+        position = st.selectbox("Position in Water Body:", ["Shore", "Transition", "Middle"])
+        depth = st.number_input("Water Depth (ft):", 0.0, 50.0, value=estimated_depth)
+        fish_depth = st.number_input("Fish Depth (ft):", 0.0, 50.0, value=max(0.0, estimated_depth - 1.0))
+        bait = st.text_input("Bait Used:")
+        fish_type = st.text_input("Fish Caught:", "Channel Catfish")
+        length = st.number_input("Length (in):", 0.0, 60.0, 20.0)
+        weight = st.number_input("Weight (lb):", 0.0, 100.0, 5.0)
+        notes = st.text_area("Notes:")
+        score = st.slider("Trip Success Score (1–10)", 1, 10, 8)
+        submitted = st.form_submit_button("Log This Fish")
 
-if not trend_df.empty:
-    st.subheader("📊 Water Condition Trends")
-    st.dataframe(trend_df.tail(15), use_container_width=True)
+        if submitted:
+            now = datetime.now()
+            new_fish_entry = {
+                "Date": now.strftime("%Y-%m-%d"),
+                "Time": now.strftime("%I:%M %p"),
+                "Location Name": loc_name,
+                "Latitude": lat,
+                "Longitude": lon,
+                "Fish Type": fish_type,
+                "Length (in)": length,
+                "Weight (lb)": weight,
+                "Water Depth (ft)": depth,
+                "Fish Depth (ft)": fish_depth,
+                "Bait Used": bait,
+                "Area Type": area,
+                "Water Type": water_type,
+                "Position": position,
+                "Success Score (1–10)": score,
+                "Notes": notes
+            }
+            st.session_state.setdefault("fish_log", []).append(new_fish_entry)
+            st.success("✅ Fish entry logged!")
 
-# Fetch and display weather data
-st.subheader("🌦️ Recent Weather Conditions")
-with st.spinner("Fetching weather data..."):
-    weather_df = fetch_weather_data(*coords, show_errors=settings["show_errors"])
-    if not weather_df.empty:
-        st.dataframe(weather_df.tail(15), use_container_width=True)
-
-# Upload fishing log
-st.subheader("📂 Upload Your Fishing Log")
-log_file = st.file_uploader("Upload CSV", type=["csv"])
-
-if log_file is not None:
-    user_log = pd.read_csv(log_file)
-    st.write("Your Fishing Log:")
-    st.dataframe(user_log)
-
-    st.subheader("🎯 Rate Your Trip Success")
-    selected_row = st.selectbox("Select a row to rate (by index):", user_log.index)
-    if selected_row is not None:
-        score = st.slider("Success Score (1 = poor, 10 = excellent)", 1, 10, 5)
-        user_log.loc[selected_row, "Success Score (1–10)"] = score
-        st.success(f"Recorded success score of {score} for row {selected_row}.")
-
-# --- Add new log entry ---
-st.subheader("➕ Add New Fishing Log Entry")
-if st.button("Add This Entry to Log"):
-    now = datetime.now()
-    new_entry = {
-        "Date": now.strftime("%Y-%m-%d"),
-        "Time": now.strftime("%I:%M %p"),
-        "Location Name": location_name,
-        "Sub-location": sub_location,
-        "Area Type": area_type,
-        "Water Type": water_type,
-        "Position": position,
-        "Fishing Method": shore_or_boat,
-        "Access Point": access_point,
-        "Water Depth (ft)": water_depth,
-        "Fish Depth (ft)": fish_depth,
-        "Success Score (1–10)": score if log_file is not None else None,
-        "Notes": "",
-        "Latitude": coords[0],
-        "Longitude": coords[1]
-    }
-
-    if log_file is not None:
-        updated_log = pd.concat([user_log, pd.DataFrame([new_entry])], ignore_index=True)
-    else:
-        updated_log = pd.DataFrame([new_entry])
-
-    st.success("🎣 New fishing log entry added.")
-    st.dataframe(updated_log)
-
-    csv = updated_log.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Download Updated Log",
-        data=csv,
-        file_name="updated_fishing_log.csv",
-        mime="text/csv"
-    )
-
-# Placeholder for prediction (coming soon)
-st.subheader("🔮 Prediction Coming Soon")
-st.info("In the next version, this app will use environmental data, weather, and your log to predict catch likelihood!")
+if "fish_log" in st.session_state:
+    st.subheader("📄 Logged Catches")
+    df = pd.DataFrame(st.session_state["fish_log"])
+    st.dataframe(df, use_container_width=True)
+    st.download_button("📥 Download Catch Log", df.to_csv(index=False), "fish_log.csv", "text/csv")
