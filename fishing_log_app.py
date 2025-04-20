@@ -28,7 +28,6 @@ import pandas as pd
 import requests
 from datetime import datetime, timedelta
 import pytz
-import openmeteo_requests
 
 st.set_page_config(page_title="Fishing Forecast App", layout="wide")
 
@@ -95,15 +94,15 @@ def calculate_trends(df):
 
 def fetch_weather_data(latitude, longitude, timezone="America/Chicago", show_errors=True):
     try:
-        client = openmeteo_requests.Client()
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
             "latitude": latitude,
             "longitude": longitude,
-            "hourly": ["temperature_2m", "relative_humidity_2m", "surface_pressure", "wind_speed_10m", "wind_direction_10m"],
+            "hourly": "temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m",
             "timezone": timezone
         }
-        response = client.get(url, params=params)
+        response = requests.get(url, params=params)
+        response.raise_for_status()
         data = response.json()
         hourly = pd.DataFrame(data["hourly"])
         hourly["time"] = pd.to_datetime(hourly["time"])
