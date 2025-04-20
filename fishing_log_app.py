@@ -92,7 +92,7 @@ if isinstance(clicked, dict) and isinstance(clicked.get("last_clicked"), dict):
     lon = latlng.get("lng")
     if lat is not None and lon is not None:
         st.session_state['last_clicked_coords'] = (lat, lon)
-        if lat is not None and lon is not None:
+        estimated_depth = estimate_depth_from_combined_sources(lat, lon)
         estimated_depth = estimate_depth_from_combined_sources(lat, lon)
 
         st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
