@@ -81,7 +81,7 @@ clicked = st_folium.st_folium(m, width=700, height=500)
 
 if isinstance(clicked, dict) and isinstance(clicked.get("last_clicked"), dict):
     latlng = clicked["last_clicked"]
-        lat = latlng.get("lat")
+    lat = latlng.get("lat")
     lon = latlng.get("lng")
     if lat is not None and lon is not None:
         estimated_depth = estimate_depth_from_combined_sources(lat, lon)
