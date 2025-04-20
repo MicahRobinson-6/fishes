@@ -35,11 +35,13 @@ st.set_page_config(page_title="Fishing Forecast App", layout="wide")
 LOCATIONS = {
     "113 Bridge": {
         "coordinates": (43.139, -89.387),
-        "sub_locations": ["Below Bridge", "Above Bridge", "Pool Between Bridges"]
+        "sub_locations": ["Below Bridge", "Above Bridge", "Pool Between Bridges"],
+        "parking": [(43.1392, -89.3875), (43.1388, -89.3862)]
     },
     "Cherokee Marsh": {
         "coordinates": (43.157, -89.384),
-        "sub_locations": ["West Shore", "Outlet Bay", "Lily Pads"]
+        "sub_locations": ["West Shore", "Outlet Bay", "Lily Pads"],
+        "parking": [(43.1581, -89.3851)]
     }
 }
 PARAMS = {
@@ -61,16 +63,20 @@ if edit_location != "None":
     lat = st.sidebar.number_input("Latitude", value=LOCATIONS[edit_location]["coordinates"][0])
     lon = st.sidebar.number_input("Longitude", value=LOCATIONS[edit_location]["coordinates"][1])
     subs = st.sidebar.text_area("Sub-locations (comma separated)", ", ".join(LOCATIONS[edit_location]["sub_locations"]))
+    parks = st.sidebar.text_area("Parking coordinates (comma separated lat,lon)", ", ".join([f"{x[0]},{x[1]}" for x in LOCATIONS[edit_location].get("parking", [])]))
     if st.sidebar.button("Update Location"):
         LOCATIONS.pop(edit_location)
         LOCATIONS[new_name] = {
             "coordinates": (lat, lon),
-            "sub_locations": [s.strip() for s in subs.split(",") if s.strip()]
+            "sub_locations": [s.strip() for s in subs.split(",") if s.strip()],
+            "parking": [tuple(map(float, p.strip().split(","))) for p in parks.split("\n") if p.strip() and "," in p]
         }
         st.sidebar.success(f"Updated location '{new_name}'")
+        st.experimental_rerun()
     if st.sidebar.button("Delete Location"):
         LOCATIONS.pop(edit_location)
         st.sidebar.success(f"Deleted location '{edit_location}'")
+        st.experimental_rerun()
 
 add_new_loc = st.sidebar.checkbox("Add New Location")
 if add_new_loc:
@@ -78,13 +84,16 @@ if add_new_loc:
     lat = st.sidebar.number_input("New Latitude")
     lon = st.sidebar.number_input("New Longitude")
     sub = st.sidebar.text_area("Sub-locations (comma separated)")
+    parks = st.sidebar.text_area("Parking coordinates (one lat,lon per line)")
     if st.sidebar.button("Add Location"):
         if name and sub:
             LOCATIONS[name] = {
                 "coordinates": (lat, lon),
-                "sub_locations": [s.strip() for s in sub.split(",") if s.strip()]
+                "sub_locations": [s.strip() for s in sub.split(",") if s.strip()],
+                "parking": [tuple(map(float, p.strip().split(","))) for p in parks.split("\n") if p.strip() and "," in p]
             }
             st.sidebar.success(f"Added location '{name}'")
+            st.experimental_rerun()
 
 # --- Functions ---
 def fetch_usgs_data(site_id, days=7, show_errors=True):
@@ -144,7 +153,6 @@ def fetch_weather_data(latitude, longitude, timezone="America/Chicago", show_err
         if show_errors:
             st.error(f"Failed to fetch weather data: {e}")
         return pd.DataFrame()
-
 # --- Streamlit Interface ---
 settings = get_user_settings()
 
