@@ -36,7 +36,7 @@ LOCATIONS = {
     "113 Bridge": {
         "coordinates": (43.139, -89.387),
         "sub_locations": ["Below Bridge", "Above Bridge", "Pool Between Bridges"],
-        "parking": [(43.151959, -89.404354), (43.152918, -89.403104), (43.152918, -89.403104), 
+        "parking": [(43.151959, -89.404354), (43.152918, -89.403104), (43.152918, -89.403104)] 
     }
 }
 PARAMS = {
