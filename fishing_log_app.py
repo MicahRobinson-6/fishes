@@ -36,12 +36,7 @@ LOCATIONS = {
     "113 Bridge": {
         "coordinates": (43.139, -89.387),
         "sub_locations": ["Below Bridge", "Above Bridge", "Pool Between Bridges"],
-        "parking": [(43.1392, -89.3875), (43.1388, -89.3862)]
-    },
-    "Cherokee Marsh": {
-        "coordinates": (43.157, -89.384),
-        "sub_locations": ["West Shore", "Outlet Bay", "Lily Pads"],
-        "parking": [(43.1581, -89.3851)]
+        "parking": [(43.151959, -89.404354), (43.152918, -89.403104), (43.152918, -89.403104), 
     }
 }
 PARAMS = {
