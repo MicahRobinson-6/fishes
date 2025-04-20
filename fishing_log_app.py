@@ -68,6 +68,9 @@ if edit_location != "None":
             "sub_locations": [s.strip() for s in subs.split(",") if s.strip()]
         }
         st.sidebar.success(f"Updated location '{new_name}'")
+    if st.sidebar.button("Delete Location"):
+        LOCATIONS.pop(edit_location)
+        st.sidebar.success(f"Deleted location '{edit_location}'")
 
 add_new_loc = st.sidebar.checkbox("Add New Location")
 if add_new_loc:
@@ -82,7 +85,6 @@ if add_new_loc:
                 "sub_locations": [s.strip() for s in sub.split(",") if s.strip()]
             }
             st.sidebar.success(f"Added location '{name}'")
-
 
 # --- Functions ---
 def fetch_usgs_data(site_id, days=7, show_errors=True):
