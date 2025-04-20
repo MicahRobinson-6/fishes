@@ -86,7 +86,7 @@ st.markdown("**🗺️ Click on the map to add a catch location.**")
 map_data = st_folium.folium_static(m, width=700, height=500)
 clicked = st_folium.folium_static(m, width=700, height=500)
 
-if clicked and 'last_clicked' in clicked:
+if clicked is not None and isinstance(clicked, dict) and 'last_clicked' in clicked:
     lat, lon = clicked['last_clicked']['lat'], clicked['last_clicked']['lng']
     estimated_depth = estimate_depth_from_combined_sources(lat, lon)
     st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
