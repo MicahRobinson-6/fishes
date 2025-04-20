@@ -82,8 +82,13 @@ folium.LayerControl().add_to(m)
 
 clicked = st_folium.st_folium(m, width=700, height=500)
 
-if clicked is not None and isinstance(clicked, dict) and 'last_clicked' in clicked:
-    lat, lon = clicked['last_clicked']['lat'], clicked['last_clicked']['lng']
+if clicked and isinstance(clicked, dict):
+    last_clicked = clicked.get("last_clicked")
+    if last_clicked and isinstance(last_clicked, dict):
+        lat, lon = last_clicked.get("lat"), last_clicked.get("lng")
+        if lat is not None and lon is not None:
+ 
+
     estimated_depth = estimate_depth_from_combined_sources(lat, lon)
 
     # Show immediate pin on click
