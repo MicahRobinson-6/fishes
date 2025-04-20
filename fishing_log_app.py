@@ -66,9 +66,12 @@ class Outing:
         self.fish_caught.append(fish_data)
 
     def to_dict(self):
-        return {
-            "Location Name": self.location_name,
-            "Start Time": self.start_time.strftime("%Y-%m-%d %I:%M %p"),
-            "End Time": self.end_time.strftime("%Y-%m-%d %I:%M %p") if self.end_time else None,
-            "Success Score
+    return {
+        "Location Name": self.location_name,
+        "Start Time": self.start_time.strftime("%Y-%m-%d %I:%M %p"),
+        "End Time": self.end_time.strftime("%Y-%m-%d %I:%M %p") if self.end_time else None,
+        "Success Score (1–10)": self.success_score,  # Fixed the unterminated string
+        "Notes": self.notes,
+        "Fish Caught": self.fish_caught
+    }
 
