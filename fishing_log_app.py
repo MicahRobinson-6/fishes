@@ -77,13 +77,21 @@ folium.TileLayer(
 folium.TileLayer("OpenSeaMap", name="Water Depth").add_to(m)
 folium.LayerControl().add_to(m)
 
+clicked = None
+if 'last_clicked_coords' in st.session_state:
+    folium.Marker(
+        location=st.session_state['last_clicked_coords'],
+        popup="Selected Catch Location",
+        icon=folium.Icon(color='red', icon='info-sign')
+    ).add_to(m)
 clicked = st_folium.st_folium(m, width=700, height=500)
 
 if isinstance(clicked, dict) and isinstance(clicked.get("last_clicked"), dict):
     latlng = clicked["last_clicked"]
     lat = latlng.get("lat")
     lon = latlng.get("lng")
-    if lat is not None and lon is not None:
+            st.session_state['last_clicked_coords'] = (lat, lon)
+        if lat is not None and lon is not None:
         estimated_depth = estimate_depth_from_combined_sources(lat, lon)
 
         st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
