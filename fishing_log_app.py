@@ -118,7 +118,7 @@ if menu == "Log a Catch":
             success_score=outing_score,
             notes=outing_notes
         )
-                                        st.session_state['current_outing'] = new_outing
+            st.session_state['current_outing'] = new_outing
             st.session_state['past_outings'].append(new_outing)
             st.success("🎣 New outing started!")
     st.title("🎣 Log Fish by Map Location")
@@ -150,7 +150,6 @@ if menu == "Log a Catch":
         if lat is not None and lon is not None:
             st.session_state['last_clicked_coords'] = (lat, lon)
             estimated_depth = estimate_depth_from_combined_sources(lat, lon)
-
             st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
             st.info(f"Estimated Water Depth at this point: **{estimated_depth} ft**\n\nBased on USGS gage reading with location-based adjustment.")
 
@@ -229,8 +228,7 @@ if menu == "Manage Locations":
         new_name = st.text_input("Location Name", selected)
         coords = st.text_input("Coordinates (lat, lon)", f"{loc_data['coordinates'][0]}, {loc_data['coordinates'][1]}")
         subs = st.text_input("Sub-locations (comma-separated)", ", ".join(loc_data['sub_locations']))
-        parks = st.text_area("Parking Locations (lat,lon per line)", "
-".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))
+        parks = st.text_area("Parking Locations (lat,lon per line)", ", ".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))
 
         if st.button("Update Location"):
             try:
