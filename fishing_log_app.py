@@ -90,7 +90,8 @@ if isinstance(clicked, dict) and isinstance(clicked.get("last_clicked"), dict):
     latlng = clicked["last_clicked"]
     lat = latlng.get("lat")
     lon = latlng.get("lng")
-            st.session_state['last_clicked_coords'] = (lat, lon)
+    if lat is not None and lon is not None:
+        st.session_state['last_clicked_coords'] = (lat, lon)
         if lat is not None and lon is not None:
         estimated_depth = estimate_depth_from_combined_sources(lat, lon)
 
