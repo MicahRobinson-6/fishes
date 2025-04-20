@@ -9,7 +9,7 @@
 # Each fish log entry will now include:
 # - Location (linked to saved spots)
 # - Specific catch coordinates (lat, lon)
-# - Water/fish depth, bait, catch details
+# - Water/fish depth, bait, rigging, catch details
 # - Environmental data automatically pulled from APIs
 
 # Users will interactively click on a map to drop a marker and log catches by position
@@ -54,16 +54,16 @@ def fetch_usgs_gage_height(site_id):
         return float(value)
     except Exception as e:
         st.warning(f"Could not fetch gage height: {e}")
-        return 8.0  # fallback depth
+        return 8.0
 
-# Estimate depth using USGS and bathymetric approximation
+# Improved depth estimation using tighter distance scaling
 def estimate_depth_from_combined_sources(lat, lon):
     nearest = min(USGS_STATION.items(), key=lambda s: geodesic(s[1]["coordinates"], (lat, lon)).feet)
     station_id, station_data = nearest
     gage_depth = fetch_usgs_gage_height(station_data["site_id"])
     channel_center = LOCATIONS["113 Bridge"]["coordinates"]
     distance_from_center = geodesic(channel_center, (lat, lon)).meters
-    bathy_adjustment = max(0, 3.0 - distance_from_center / 15.0)
+    bathy_adjustment = max(0, 5.0 - distance_from_center / 10.0)  # more nuanced channel profile
     return round(gage_depth + bathy_adjustment, 1)
 
 # --- Interactive Catch Map Logging ---
@@ -77,34 +77,33 @@ folium.TileLayer(
     attr="Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap",
     name="Terrain"
 ).add_to(m)
-
 folium.TileLayer("OpenSeaMap", name="Water Depth").add_to(m)
 folium.LayerControl().add_to(m)
 
-# Add existing catch markers
-if "fish_log" in st.session_state:
-    for entry in st.session_state["fish_log"]:
-        coords = (entry["Latitude"], entry["Longitude"])
-        label = f"{entry['Fish Type']} ({entry['Weight (lb)']} lb)"
-        folium.Marker(location=coords, popup=folium.Popup(label)).add_to(m)
-
-# Capture map interaction
 clicked = st_folium.st_folium(m, width=700, height=500)
 
 if clicked is not None and isinstance(clicked, dict) and 'last_clicked' in clicked:
     lat, lon = clicked['last_clicked']['lat'], clicked['last_clicked']['lng']
     estimated_depth = estimate_depth_from_combined_sources(lat, lon)
+
+    # Show immediate pin on click
+    folium.Marker(
+        location=(lat, lon),
+        popup=folium.Popup(f"Selected Catch Point: ({lat:.5f}, {lon:.5f})")
+    ).add_to(m)
+    st_folium.st_folium(m, width=700, height=500, key="map_updated")
+
     st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
-    st.info(f"Estimated Water Depth at this point: **{estimated_depth} ft**\n\nBased on USGS gage reading and relative distance from channel center.")
+    st.info(f"Estimated Water Depth at this point: **{estimated_depth} ft**\n\nBased on USGS gage reading and adjusted for river position.")
 
     with st.form("fish_log_form"):
         loc_name = st.selectbox("Location Name:", list(LOCATIONS.keys()))
-        area = st.selectbox("Area Type:", ["Channel", "Hold", "Flat", "Drop Off"])
         water_type = st.selectbox("Water Type:", ["Channel", "Near Channel", "Slack"])
         position = st.selectbox("Position in Water Body:", ["Shore", "Transition", "Middle"])
         depth = st.number_input("Water Depth (ft):", 0.0, 50.0, value=estimated_depth)
         fish_depth = st.number_input("Fish Depth (ft):", 0.0, 50.0, value=max(0.0, estimated_depth - 1.0))
         bait = st.text_input("Bait Used:")
+        rigging = st.text_input("Rigging Setup (e.g., Carolina rig, slip float, etc.)")
         fish_type = st.text_input("Fish Caught:", "Channel Catfish")
         length = st.number_input("Length (in):", 0.0, 60.0, 20.0)
         weight = st.number_input("Weight (lb):", 0.0, 100.0, 5.0)
@@ -126,7 +125,7 @@ if clicked is not None and isinstance(clicked, dict) and 'last_clicked' in click
                 "Water Depth (ft)": depth,
                 "Fish Depth (ft)": fish_depth,
                 "Bait Used": bait,
-                "Area Type": area,
+                "Rigging": rigging,
                 "Water Type": water_type,
                 "Position": position,
                 "Success Score (1–10)": score,
