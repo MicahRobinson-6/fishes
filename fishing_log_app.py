@@ -29,7 +29,6 @@ import requests
 from datetime import datetime, timedelta
 import pytz
 import openmeteo_requests
-from retry_requests import retry
 
 st.set_page_config(page_title="Fishing Forecast App", layout="wide")
 
@@ -96,7 +95,7 @@ def calculate_trends(df):
 
 def fetch_weather_data(latitude, longitude, timezone="America/Chicago", show_errors=True):
     try:
-        client = openmeteo_requests.Client(retry_strategy=retry())
+        client = openmeteo_requests.Client()
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
             "latitude": latitude,
