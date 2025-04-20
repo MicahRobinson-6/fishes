@@ -81,15 +81,14 @@ clicked = st_folium.st_folium(m, width=700, height=500)
 
 if isinstance(clicked, dict) and isinstance(clicked.get("last_clicked"), dict):
     latlng = clicked["last_clicked"]
-    lat = latlng.get("lat")
+        lat = latlng.get("lat")
     lon = latlng.get("lng")
-        if lat is not None and lon is not None:
-        lat, lon = last_clicked["lat"], last_clicked["lng"]
+    if lat is not None and lon is not None:
         estimated_depth = estimate_depth_from_combined_sources(lat, lon)
-    
+
         st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
         st.info(f"Estimated Water Depth at this point: **{estimated_depth} ft**\n\nBased on USGS gage reading with location-based adjustment.")
-    
+
         with st.form("fish_log_form"):
             loc_name = st.selectbox("Location Name:", list(LOCATIONS.keys()))
             water_type = st.selectbox("Water Type:", ["Channel", "Near Channel", "Slack"])
@@ -104,7 +103,7 @@ if isinstance(clicked, dict) and isinstance(clicked.get("last_clicked"), dict):
             notes = st.text_area("Notes:")
             score = st.slider("Trip Success Score (1–10)", 1, 10, 8)
             submitted = st.form_submit_button("Log This Fish")
-    
+
             if submitted:
                 now = datetime.now()
                 new_fish_entry = {
