@@ -229,8 +229,7 @@ if menu == "Manage Locations":
         new_name = st.text_input("Location Name", selected)
         coords = st.text_input("Coordinates (lat, lon)", f"{loc_data['coordinates'][0]}, {loc_data['coordinates'][1]}")
         subs = st.text_input("Sub-locations (comma-separated)", ", ".join(loc_data['sub_locations']))
-        parks = st.text_area("Parking Locations (lat,lon per line)", "
-".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))
+        parks = st.text_area("Parking Locations (lat,lon per line)", "\n".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))
 
         if st.button("Update Location"):
             try:
