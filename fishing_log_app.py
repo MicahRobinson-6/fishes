@@ -216,18 +216,65 @@ if menu == "View Catch Log":
                     st.info("No fish recorded for this outing.")
     else:
         st.info("No outings have been saved yet.")
-    st.title("📄 Logged Catches")
-    if "fish_log" in st.session_state:
-        df = pd.DataFrame(st.session_state["fish_log"])
-        st.dataframe(df, use_container_width=True)
-        st.download_button("📥 Download Catch Log", df.to_csv(index=False), "fish_log.csv", "text/csv")
-    else:
-        st.info("No catches logged yet.")
+    
 
 if menu == "Manage Locations":
     st.title("📍 Manage Locations")
-    st.write("This section will soon allow you to edit, add, or remove fishing locations.")
+
+    selected = st.selectbox("Edit Existing Location", ["Add New"] + list(LOCATIONS.keys()))
+
+    if selected != "Add New":
+        loc_data = LOCATIONS[selected]
+        new_name = st.text_input("Location Name", selected)
+        coords = st.text_input("Coordinates (lat, lon)", f"{loc_data['coordinates'][0]}, {loc_data['coordinates'][1]}")
+        subs = st.text_input("Sub-locations (comma-separated)", ", ".join(loc_data['sub_locations']))
+        parks = st.text_area("Parking Locations (lat,lon per line)", "
+".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))
+
+        if st.button("Update Location"):
+            try:
+                lat, lon = map(float, coords.split(","))
+                sublist = [s.strip() for s in subs.split(",") if s.strip()]
+                parklist = [tuple(map(float, line.split(","))) for line in parks.splitlines() if "," in line]
+                LOCATIONS.pop(selected)
+                LOCATIONS[new_name] = {
+                    "coordinates": (lat, lon),
+                    "sub_locations": sublist,
+                    "parking": parklist
+                }
+                st.success(f"Updated location '{new_name}'")
+            except Exception as e:
+                st.error(f"Error updating location: {e}")
+
+        if st.button("Delete Location"):
+            LOCATIONS.pop(selected)
+            st.success(f"Deleted location '{selected}'")
+
+    else:
+        st.subheader("➕ Add New Location")
+        name = st.text_input("New Location Name")
+        coords = st.text_input("New Coordinates (lat, lon)")
+        subs = st.text_input("Sub-locations (comma-separated)")
+        parks = st.text_area("Parking Locations (lat,lon per line)")
+        if st.button("Add Location"):
+            try:
+                lat, lon = map(float, coords.split(","))
+                sublist = [s.strip() for s in subs.split(",") if s.strip()]
+                parklist = [tuple(map(float, line.split(","))) for line in parks.splitlines() if "," in line]
+                LOCATIONS[name] = {
+                    "coordinates": (lat, lon),
+                    "sub_locations": sublist,
+                    "parking": parklist
+                }
+                st.success(f"Added location '{name}'")
+            except Exception as e:
+                st.error(f"Error adding location: {e}")
 
 if menu == "Settings":
     st.title("⚙️ Settings")
-    st.write("This section will hold configurable options like units, display preferences, etc.")
+    st.write("Configure preferences below.")
+
+    unit = st.selectbox("Preferred units for depth/length:", ["Imperial (ft/in)", "Metric (cm/m)"])
+    default_bait = st.text_input("Default bait used:", "Nightcrawlers")
+    default_rig = st.text_input("Default rigging setup:", "Carolina rig")
+    st.success("Settings saved (not persisted between sessions in this prototype).")
