@@ -79,8 +79,9 @@ folium.LayerControl().add_to(m)
 
 clicked = st_folium.st_folium(m, width=700, height=500)
 
-if clicked is not None and isinstance(clicked, dict) and 'last_clicked' in clicked:
-    lat, lon = clicked['last_clicked']['lat'], clicked['last_clicked']['lng']
+last_clicked = clicked.get("last_clicked") if isinstance(clicked, dict) else None
+if isinstance(last_clicked, dict) and "lat" in last_clicked and "lng" in last_clicked:
+    lat, lon = last_clicked["lat"], last_clicked["lng"]
     estimated_depth = estimate_depth_from_combined_sources(lat, lon)
 
     st.success(f"📍 Catch location set at: ({lat:.5f}, {lon:.5f})")
