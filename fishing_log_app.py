@@ -72,7 +72,12 @@ st.markdown("Click on the map to mark exactly where you caught each fish. You ca
 
 m = folium.Map(location=[43.139, -89.387], zoom_start=15)
 folium.TileLayer("Esri.WorldImagery", name="Satellite").add_to(m)
-folium.TileLayer("Stamen Terrain", name="Terrain").add_to(m)
+folium.TileLayer(
+    tiles="https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg",
+    attr="Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap",
+    name="Terrain"
+).add_to(m)
+
 folium.TileLayer("OpenSeaMap", name="Water Depth").add_to(m)
 folium.LayerControl().add_to(m)
 
