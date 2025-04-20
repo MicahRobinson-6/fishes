@@ -111,16 +111,16 @@ if menu == "Log a Catch":
         outing_score = st.slider("Success Score (1–10)", 1, 10, 7)
         outing_notes = st.text_area("Outing Notes")
         if st.button("Begin Outing"):
-        new_outing = Outing(
+            new_outing = Outing(
             location_name=outing_location,
             start_time=outing_start,
             end_time=outing_end,
             success_score=outing_score,
             notes=outing_notes
         )
-                            st.session_state['current_outing'] = new_outing
-        st.session_state['past_outings'].append(new_outing)
-        st.success("🎣 New outing started!")
+                                        st.session_state['current_outing'] = new_outing
+            st.session_state['past_outings'].append(new_outing)
+            st.success("🎣 New outing started!")
     st.title("🎣 Log Fish by Map Location")
     st.markdown("Click on the map to mark exactly where you caught each fish. You can log multiple fish with details for each.")
 
@@ -229,7 +229,8 @@ if menu == "Manage Locations":
         new_name = st.text_input("Location Name", selected)
         coords = st.text_input("Coordinates (lat, lon)", f"{loc_data['coordinates'][0]}, {loc_data['coordinates'][1]}")
         subs = st.text_input("Sub-locations (comma-separated)", ", ".join(loc_data['sub_locations']))
-        parks = st.text_area("Parking Locations (lat,lon per line)", "\n".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))
+        parks = st.text_area("Parking Locations (lat,lon per line)", "
+".join([f"{lat},{lon}" for lat, lon in loc_data['parking']]))
 
         if st.button("Update Location"):
             try:
