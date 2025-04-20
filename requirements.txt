@@ -3,3 +3,4 @@ pandas
 requests
 openmeteo-requests
 retry-requests
+streamlit-folium
