@@ -1,6 +1,7 @@
 streamlit
 pandas
 requests
-openmeteo-requests
-retry-requests
+pytz
 streamlit-folium
+folium
+geopy
